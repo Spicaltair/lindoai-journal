@@ -1,0 +1,16 @@
+credentials:
+  usernames:
+    admin:
+      name: 管理员
+      password: $2b$12$tjVGT6jsUiMlnwFJ5umcke.EaeD2GWhmt/SXxrl5VKTl/rOV/hvqW
+    user1:
+      name: 用户A
+      password: $2b$12$KFH.O.3utX6HyJ9CqAg1muqh5HjC1k8h9gWZc/5TC2WroDKwrFJKS
+
+cookie:
+  name: lindoai-auth
+  key: random_key
+  expiry_days: 1
+
+preauthorized:
+  emails: []
