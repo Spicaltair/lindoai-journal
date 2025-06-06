@@ -20,7 +20,20 @@ def insert_log(date, start_time, end_time, content, project, recorder):
               (content,))
     conn.commit()
     conn.close()
+    
+    
+def delete_log(username, date, start_time, end_time, project, content):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        DELETE FROM logs 
+        WHERE username = ? AND date = ? AND start = ? AND end = ? AND project = ? AND content = ?
+    """, (username, date, start_time, end_time, project, content))
+    conn.commit()
+    conn.close()
+
 
 def get_projects():
     with open("projects.xml", "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
+        

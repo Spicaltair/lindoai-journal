@@ -30,3 +30,10 @@ def add_project_for_user(username, project):
     c.execute("INSERT INTO user_projects (username, project) VALUES (?, ?)", (username, project))
     conn.commit()
     conn.close()
+    
+def delete_project_for_user(username, project):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM user_projects WHERE username = ? AND project = ?", (username, project))
+    conn.commit()
+    conn.close()
