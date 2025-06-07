@@ -14,6 +14,26 @@ from db.db_projects import (
 )
 from db.db_phrases import get_top_phrases_for_user
 from db.db_meta import create_meta_table, save_meta, get_meta_for_user
+from io import StringIO
+
+def generate_markdown_for_logs(logs, date, username):
+    location, weather, temperature = get_meta_for_user(username, str(date))
+
+    lines = []
+    lines.append(f"# 📅 {date} 工程日志")
+    lines.append(f"- 记录人：{username}")
+    lines.append(f"- 地点：{location or '-'}")
+    lines.append(f"- 天气：{weather or '-'}，{temperature or '-'}℃")
+    lines.append("\n---\n\n## ⏱ 日志记录")
+
+    if not logs:
+        lines.append("_暂无记录_")
+    else:
+        for start, end, content, project in logs:
+            lines.append(f"- {start} - {end}（{project}）：{content}")
+
+    return "\n".join(lines)
+
 
 # 初始化数据库
 init_db()
@@ -93,6 +113,17 @@ elif authentication_status:
         st.subheader("📋 今日记录")
 
         logs = get_logs_by_user_date(username, str(date))
+        # ⬇️ 生成 Markdown 内容并提供下载
+        md_text = generate_markdown_for_logs(logs, str(date), username)
+        md_filename = f"{date}-log.md"
+
+        st.download_button(
+            label="📄 导出 Markdown",
+            data=md_text,
+            file_name=md_filename,
+            mime="text/markdown"
+        )
+
         if not logs:
             st.info("暂无记录")
         else:
