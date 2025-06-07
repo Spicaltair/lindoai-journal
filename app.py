@@ -3,20 +3,21 @@ import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
 import datetime
-from db import insert_log, get_logs_by_user_date
-from db_projects import (
+from streamlit.components.v1 import html
+from db.db_core import init_db
+from db.db_logs import insert_log, get_logs_by_user_date, delete_log
+from db.db_projects import (
+    create_user_projects_table,
     get_projects_for_user,
     add_project_for_user,
-    create_user_projects_table,
-    delete_project_for_user  # ✅ 加上这个
+    delete_project_for_user,
 )
+from db.db_phrases import get_top_phrases_for_user
+from db.db_meta import create_meta_table, save_meta, get_meta_for_user
 
-from db_meta import create_meta_table, get_meta_for_user, save_meta
-
+# 初始化数据库
+init_db()
 create_meta_table()
-
-
-# 初始化用户项目表
 create_user_projects_table()
 
 # --- 登录认证 ---
@@ -24,7 +25,10 @@ with open("auth_config.yaml", encoding="utf-8") as f:
     config = yaml.load(f, Loader=SafeLoader)
 
 authenticator = stauth.Authenticate(
-    config["credentials"], config["cookie"]["name"], config["cookie"]["key"], config["cookie"]["expiry_days"]
+    config["credentials"],
+    config["cookie"]["name"],
+    config["cookie"]["key"],
+    config["cookie"]["expiry_days"]
 )
 
 name, authentication_status, username = authenticator.login("登录", location="main")
@@ -35,71 +39,137 @@ elif authentication_status is None:
     st.warning("请输入用户名和密码")
 elif authentication_status:
 
-    st.title(f"👷‍♂️ LindoAI 日志记录 - {name}")
+    st.sidebar.title(f"👷‍♂️ LindoAI 日志记录 - {name}")
     authenticator.logout("退出登录", "sidebar")
 
+    # 侧边栏：基础信息
     st.sidebar.header("🗓 日期选择")
     today = datetime.date.today()
     date = st.sidebar.date_input("选择日期", today)
-    # 🧱 左侧栏中的基础信息输入
+
     st.sidebar.markdown("### 📌 基础信息")
-
-    # 获取已有信息
     location, weather, temperature = get_meta_for_user(username, str(date))
-
     new_location = st.sidebar.text_input("地点", value=location)
-    new_weather = st.sidebar.selectbox("天气", ["", "晴", "阴", "雨", "雪", "多云"], index=["", "晴", "阴", "雨", "雪", "多云"].index(weather if weather else ""))
+    new_weather = st.sidebar.selectbox(
+        "天气", ["", "晴", "阴", "大雨", "中雨", "小雨", "雪", "多云"],
+        index=["", "晴", "阴", "大雨", "中雨", "小雨", "雪", "多云"].index(weather if weather else "")
+    )
     new_temp = st.sidebar.text_input("温度 ℃", value=temperature)
-
-    st.sidebar.markdown(f"记录人：**{username}**")
+    recorder_name = st.sidebar.text_input("记录人", value=username)
 
     if st.sidebar.button("💾 保存基础信息"):
-        save_meta(username, str(date), new_location, new_weather, new_temp)
+        save_meta(recorder_name, str(date), new_location, new_weather, new_temp)
         st.sidebar.success("已保存！")
 
+ 
+    left_col, right_col = st.columns([1, 3])
 
-    st.subheader("➕ 添加日志记录")
-
-    col1, col2, col3 = st.columns([1, 1, 2])
-    with col1:
+    with left_col:
         start_time = st.time_input("开始时间", datetime.time(8, 0))
-    with col2:
         end_time = st.time_input("结束时间", datetime.time(9, 0))
-    with col3:
         user_projects = get_projects_for_user(username)
-        st.subheader("🗂 我的项目")
-        for proj in user_projects:
-            col1, col2 = st.columns([6, 1])
-            with col1:
-                st.markdown(f"- {proj}")
-            with col2:
-                if st.button("🗑", key=f"del-proj-{proj}"):
-                    delete_project_for_user(username, proj)
-                    st.success(f"已删除项目：{proj}")
-                    st.experimental_rerun()
-
         selected_project = st.selectbox("选择项目", user_projects)
+
+        with st.expander("📁 我的项目管理", expanded=False):
+            if user_projects:
+                proj_to_delete = st.selectbox("选择要删除的项目", user_projects, key="delete-project")
+                if st.button("🗑 删除该项目"):
+                    delete_project_for_user(username, proj_to_delete)
+                    st.success(f"已删除项目：{proj_to_delete}")
+                    st.rerun()
+            else:
+                st.info("你还没有项目")
+        
         new_project = st.text_input("或新建项目名称")
-        if st.button("➕ 添加新项目") and new_project:
-            add_project_for_user(username, new_project.strip())
-            st.success("项目已添加，请重新选择")
-            st.experimental_rerun()
+        if st.button("➕ 添加新项目"):
+            if new_project.strip():
+                add_project_for_user(username, new_project.strip())
+                st.success("项目已添加，请重新选择")
+                st.rerun()
 
-    content = st.text_area("内容描述", "")
+    with right_col:
+    
+    
+        st.subheader("📋 今日记录")
 
-    if st.button("📥 添加记录"):
-        if content.strip() and start_time < end_time and (selected_project or new_project):
-            project_used = new_project.strip() if new_project else selected_project
-            insert_log(str(date), start_time.strftime("%H:%M"), end_time.strftime("%H:%M"), content.strip(), project_used, username)
-            st.success("记录已添加！")
+        logs = get_logs_by_user_date(username, str(date))
+        if not logs:
+            st.info("暂无记录")
         else:
-            st.error("请输入完整内容，且时间段合法")
+            MAX_VISIBLE = 4
 
-    st.subheader("📋 今日记录")
+            for i, (start, end, content, project) in enumerate(logs[:MAX_VISIBLE]):
+                col1, col2 = st.columns([10, 1])
+                with col1:
+                    st.markdown(
+                        f"""
+                        <div style='
+                            padding: 8px 12px;
+                            margin-bottom: 4px;
+                            background-color: #1e1e1e;
+                            border-radius: 6px;
+                            border: 1px solid #333;
+                        '>
+                            🕒 <strong>{start} - {end}</strong> （{project}）：{content}
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                with col2:
+                    if st.button("🗑", key=f"del-log-{i}"):
+                        delete_log(username, str(date), start, end, project, content)
+                        st.rerun()
 
-    logs = get_logs_by_user_date(username, str(date))
-    if not logs:
-        st.info("暂无记录")
-    else:
-        for start, end, content, project in logs:
-            st.markdown(f"- 🕒 {start} - {end}（{project}）：{content}")
+            if len(logs) > MAX_VISIBLE:
+                with st.expander("📂 查看更多记录"):
+                    for i, (start, end, content, project) in enumerate(logs[MAX_VISIBLE:], start=MAX_VISIBLE):
+                        col1, col2 = st.columns([10, 1])
+                        with col1:
+                            st.markdown(
+                                f"""
+                                <div style='
+                                    padding: 8px 12px;
+                                    margin-bottom: 4px;
+                                    background-color: #1e1e1e;
+                                    border-radius: 6px;
+                                    border: 1px solid #333;
+                                '>
+                                    🕒 <strong>{start} - {end}</strong> （{project}）：{content}
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+                        with col2:
+                            if st.button("🗑", key=f"del-log-{i}"):
+                                delete_log(username, str(date), start, end, project, content)
+                                st.rerun()
+
+            # 内容输入框 + 添加按钮
+        common_phrases = get_top_phrases_for_user(username)
+        if common_phrases:
+            with st.expander("💡 常用内容快速选择"):
+                cols = st.columns(len(common_phrases))
+                for i, phrase in enumerate(common_phrases):
+                    with cols[i]:
+                        if st.button(phrase, key=f"phrase-{i}"):
+                            st.session_state["content_input"] = phrase
+
+        col_content, col_btn = st.columns([5, 1])
+
+        with col_content:
+            content = st.text_area("内容描述", value=st.session_state.get("content_input", ""))
+
+        with col_btn:
+            st.markdown("<br>", unsafe_allow_html=True)  # 空行让按钮垂直居中
+            if st.button("📥 添加记录"):
+                project_used = new_project.strip() if new_project else selected_project
+                if content.strip() and start_time < end_time and project_used:
+                    insert_log(str(date), start_time.strftime("%H:%M"), end_time.strftime("%H:%M"),
+                            content.strip(), project_used, username)
+                    st.success("记录已添加！")
+                    st.rerun()
+                else:
+                    st.error("请输入完整内容，且时间段合法")
+
+
+
