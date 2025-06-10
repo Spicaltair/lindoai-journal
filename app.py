@@ -115,7 +115,7 @@ elif authentication_status:
         logs = get_logs_by_user_date(username, str(date))
         # ⬇️ 生成 Markdown 内容并提供下载
         md_text = generate_markdown_for_logs(logs, str(date), username)
-        md_filename = f"{date}-log.md"
+        md_filename = f"log-{date}.md"
 
         st.download_button(
             label="📄 导出 Markdown",
