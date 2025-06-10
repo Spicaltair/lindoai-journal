@@ -16,7 +16,8 @@ from db.db_phrases import get_top_phrases_for_user
 from db.db_meta import create_meta_table, save_meta, get_meta_for_user
 from io import StringIO
 def generate_markdown_for_logs(logs, date, username):
-    location, recorder, weather, temperature = get_meta_for_user(username, str(date))
+    
+    location, recorder, weather, temperature = get_meta_for_user(username, date)
 
     lines = []
     lines.append(f"# 📅 {date} 工程日志")
