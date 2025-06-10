@@ -133,6 +133,7 @@ elif authentication_status:
                 col1, col2 = st.columns([10, 1])
                 with col1:
                     st.markdown(
+                        f"""
                         <div style='
                             padding: 10px 14px;
                             margin-bottom: 8px;
