@@ -28,7 +28,8 @@ def save_meta(recorder, date, location, weather, temperature):
 def get_meta_for_user(recorder, date):
     conn = get_connection()
     c = conn.cursor()
-    c.execute("SELECT location, weather, temperature FROM meta WHERE recorder = ? AND date = ?", (recorder, date))
+    c.execute("SELECT location, recorder, weather, temperature FROM meta WHERE recorder = ? AND date = ?", (recorder, date))
     row = c.fetchone()
     conn.close()
-    return row or ("", "", "")
+    return row or ("", "", "", "")
+
