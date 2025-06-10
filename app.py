@@ -69,7 +69,8 @@ elif authentication_status:
     date = st.sidebar.date_input("选择日期", today)
 
     st.sidebar.markdown("### 📌 基础信息")
-    location, weather, temperature = get_meta_for_user(username, str(date))
+    location, recorder, weather, temperature = get_meta_for_user(username, date)
+
     new_location = st.sidebar.text_input("地点", value=location)
     new_weather = st.sidebar.selectbox(
         "天气", ["", "晴", "阴", "大雨", "中雨", "小雨", "雪", "多云"],
