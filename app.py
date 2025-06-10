@@ -15,13 +15,12 @@ from db.db_projects import (
 from db.db_phrases import get_top_phrases_for_user
 from db.db_meta import create_meta_table, save_meta, get_meta_for_user
 from io import StringIO
-
 def generate_markdown_for_logs(logs, date, username):
-    location, weather, temperature = get_meta_for_user(username, str(date))
+    location, recorder, weather, temperature = get_meta_for_user(username, str(date))
 
     lines = []
     lines.append(f"# 📅 {date} 工程日志")
-    lines.append(f"- 记录人：{username}")
+    lines.append(f"- 记录人：{recorder or username}")
     lines.append(f"- 地点：{location or '-'}")
     lines.append(f"- 天气：{weather or '-'}，{temperature or '-'}℃")
     lines.append("\n---\n\n## ⏱ 日志记录")
@@ -33,6 +32,7 @@ def generate_markdown_for_logs(logs, date, username):
             lines.append(f"- {start} - {end}（{project}）：{content}")
 
     return "\n".join(lines)
+
 
 
 # 初始化数据库
@@ -59,7 +59,7 @@ elif authentication_status is None:
     st.warning("请输入用户名和密码")
 elif authentication_status:
 
-    st.sidebar.title(f"👷‍♂️ LindoAI 日志记录 - {name}")
+    st.sidebar.title(f"🦄👷‍♂️ LindoAI 日志记录- {name}")
     authenticator.logout("退出登录", "sidebar")
 
     # 侧边栏：基础信息
@@ -162,9 +162,12 @@ elif authentication_status:
                             st.markdown(
                                 f"""
                                 <div style='
-                                    padding: 8px 12px;
-                                    margin-bottom: 4px;
+                                    padding: 10px 14px;
+                                    margin-bottom: 8px;
                                     background-color: #1e1e1e;
+                                    color: #f8f9fa;
+                                    font-size: 14px;
+                                    font-family: "Segoe UI", sans-serif;
                                     border-radius: 6px;
                                     border: 1px solid #333;
                                 '>
